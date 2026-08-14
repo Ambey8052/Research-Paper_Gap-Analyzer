@@ -1,0 +1,36 @@
+services:
+  mongodb:
+    image: mongodb/mongodb-atlas-local:latest
+    container_name: researchmind-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  server:
+    build: ./server
+    container_name: researchmind-server
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongodb:27017/researchmind?directConnection=true
+      CLIENT_ORIGIN: http://localhost:8080
+    ports:
+      - "5000:5000"
+
+  client:
+    build: ./client
+    container_name: researchmind-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  mongo_data:
