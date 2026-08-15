@@ -19,6 +19,7 @@ LLM opinion.
 - [Tech stack](#tech-stack)
 - [Project structure](#project-structure)
 - [Getting started](#getting-started)
+- [Deploying (frontend on Vercel, backend on Render)](#deploying-frontend-on-vercel-backend-on-render)
 - [API reference](#api-reference)
 - [Development process](#development-process)
 - [Known limitations & future work](#known-limitations--future-work)
@@ -247,6 +248,68 @@ npm run dev                 # http://localhost:5173, proxies /api to :5000
 > `dotenv.config({ override: true })` specifically so this project's own `.env` always wins — if
 > you're still seeing this, fully restart the terminal (not just the Node process) so it picks up
 > a fresh environment.
+
+## Deploying (frontend on Vercel, backend on Render)
+
+This is the recommended way to share a live link with people who shouldn't have to run Docker
+themselves. The two services are deployed independently and talk to each other over HTTPS —
+there's no shared origin, so this is different from the Docker/nginx setup where nginx proxies
+`/api` locally.
+
+**Why not deploy the backend to Vercel too?** Vercel runs serverless functions, not a persistent
+process. This app's pipeline is fire-and-forget — the API responds immediately with a session id
+while Agents 2–4 keep running in the background — and serverless functions get frozen right after
+the response is sent, so the pipeline would never finish. Render (and Railway, Fly.io, etc.) run
+your `server/Dockerfile` as a normal long-lived process, which this architecture actually needs.
+
+### 1. Backend → Render
+
+1. In the Render dashboard: **New → Web Service**, connect this GitHub repo.
+   - Either let Render pick up `render.yaml` automatically (**New → Blueprint** instead, if you
+     want it to configure itself from the file at the repo root), or configure manually:
+     **Root Directory: `server`**, **Runtime: Docker**, **Plan: Free**.
+2. Add these environment variables in the Render dashboard (the free plan doesn't read `.env`
+   files — everything must be set here):
+   | Key | Value |
+   |---|---|
+   | `GEMINI_API_KEY` | your key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+   | `GEMINI_MODEL` | `gemini-flash-lite-latest` |
+   | `MONGODB_URI` | your Atlas connection string |
+   | `CLIENT_ORIGIN` | your Vercel URL, e.g. `https://research-gap-finder-eight.vercel.app` |
+   | `VECTOR_INDEX_NAME` | `paper_vector_index` |
+   | `MAX_PAPERS_PER_SEARCH` | `40` |
+3. **MongoDB Atlas → Network Access:** add `0.0.0.0/0` (allow from anywhere). Render's free tier
+   doesn't have a static outbound IP, so you can't allowlist a single address.
+4. Deploy, then copy the resulting URL.
+
+> **Free tier cold starts:** Render's free web services sleep after 15 minutes of inactivity. The
+> first request after a lull takes ~30–50s to wake up — normal, not a bug. Anyone you send the
+> link to should expect that on the first search.
+
+### 2. Frontend → Vercel
+
+You've likely already deployed the frontend (Vercel auto-detects the Vite app). It needs to know
+the Render backend's URL at **build time** (Vite env vars are baked into the static bundle, not
+read at runtime), so this repo commits `client/.env.production` — not a secret, just the public
+backend URL — which Vite loads automatically for every production build:
+
+```
+VITE_API_BASE_URL=https://<your-render-service>.onrender.com/api
+```
+
+If you change backend URLs later, either edit that file and push (Vercel auto-redeploys on push),
+or override it without touching the repo via Vercel → **Settings → Environment Variables** →
+`VITE_API_BASE_URL` (dashboard values take precedence over the committed file) → redeploy.
+
+**This live instance:** frontend at
+[research-gap-finder-eight.vercel.app](https://research-gap-finder-eight.vercel.app), backend at
+`research-paper-gap-analyzer.onrender.com`, wired together via the two mechanisms above —
+`client/.env.production` pointing at the Render URL, and `CLIENT_ORIGIN` on Render set to the
+Vercel URL for CORS.
+
+Once both are set, the flow is: browser → Vercel (static React) → Render (`/api/*`) → MongoDB
+Atlas + Gemini. Local Docker dev is unaffected — `VITE_API_BASE_URL` is unset there, so the
+client falls back to same-origin `/api`, which nginx proxies to the `server` container.
 
 ## API reference
 
