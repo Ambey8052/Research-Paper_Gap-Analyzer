@@ -21,6 +21,7 @@ LLM opinion.
 - [Getting started](#getting-started)
 - [Deploying (frontend on Vercel, backend on Render)](#deploying-frontend-on-vercel-backend-on-render)
 - [API reference](#api-reference)
+- [Security](#security)
 - [Development process](#development-process)
 - [Known limitations & future work](#known-limitations--future-work)
 
@@ -321,6 +322,43 @@ client falls back to same-origin `/api`, which nginx proxies to the `server` con
 | `GET` | `/api/research/:id/papers` | The papers found for a session, with cluster/topic tags. |
 | `GET` | `/api/health` | Liveness check. |
 
+## Security
+
+- **Dependencies:** `server` runs at **0 known vulnerabilities** (`npm audit`). The original
+  dependency tree had 5 (4 high, 1 critical — an arbitrary-code-execution advisory in
+  `protobufjs`, pulled in transitively via the embedding library). Fixed by moving from the
+  deprecated `@xenova/transformers` to its actively-maintained successor
+  `@huggingface/transformers`, plus `overrides` pinning `sharp` and `adm-zip` to patched
+  versions — confirmed the embedding pipeline still produces identical output before switching.
+  `client` has 4 remaining (3 moderate, 1 high) in `vite`/`esbuild`/`react-router-dom`; deliberately
+  **not** force-fixed because the available fixes are major-version bumps (Vite 5→8, React Router
+  6→7) and the vulnerable code paths don't apply to how this app uses them (the Vite/esbuild ones
+  are dev-server-only, irrelevant to the static production build; the React Router one is an SSR
+  hydration issue and this app is a client-only SPA). Trading a working, tested build for an
+  unused attack surface isn't a good trade — re-evaluate if the app's usage of either library
+  changes.
+- **Rate limiting:** all of `/api/research/*` is capped at 100 req/15min per IP; `POST
+  /api/research` (the expensive one — triggers real Gemini + arXiv/Semantic Scholar + MongoDB
+  work per call) is additionally capped at 10/hour per IP, since this is what actually protects
+  free-tier API quota and the database from a spam loop once a link is shared publicly.
+- **HTTP security headers** via `helmet` (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`,
+  no `X-Powered-By` disclosure, etc.).
+- **CORS** is locked to a single explicit origin (`CLIENT_ORIGIN`), not a wildcard — and the value
+  is trimmed of trailing slashes, since a mismatched trailing slash against the browser's `Origin`
+  header (which never has one) silently breaks the exact-match check browsers enforce.
+- **Input validation:** topic length is bounded (3–200 chars) before it reaches the pipeline;
+  `:id` route params are validated as real Mongo ObjectIds before hitting a query, returning a
+  clean `400` instead of leaking a raw Mongoose `CastError`.
+- **No internal error leakage:** unexpected (5xx) errors return a generic message to the client
+  and log full detail server-side only; only errors deliberately thrown with a client-facing
+  status code surface their real message.
+- **Secrets:** `server/.env` (API keys, the Atlas connection string) is gitignored and was never
+  committed — verified with `git grep` across tracked files. `client/.env.production` is
+  committed deliberately; it holds only the public backend URL, not a secret.
+- **`trust proxy`** is enabled for exactly one hop, since Render (and most PaaS hosts) sit behind
+  a reverse proxy — without it, rate limiting would see the proxy's IP for every visitor instead
+  of the real client IP, making the limiter useless.
+
 ## Development process
 
 This MVP was scoped and built as a single focused pass:
@@ -350,6 +388,13 @@ This MVP was scoped and built as a single focused pass:
    Scholar's keyless tier rate-limited under test, which the code handles by degrading
    gracefully instead of crashing the pipeline); MongoDB Atlas connectivity, auth, and write
    permissions confirmed against the real cluster; the client built cleanly with Vite.
+7. **Split deployment (Vercel + Render) and hardening** — deploying the frontend and backend to
+   separate hosts surfaced real issues a same-origin Docker setup never would have: a CORS
+   trailing-slash mismatch that would've silently broken every browser request, and an `npm audit`
+   pass that turned up a critical transitive RCE. Both are covered in [Security](#security). Fixed
+   by wiring a build-time `VITE_API_BASE_URL`, trimming `CLIENT_ORIGIN`, and swapping the
+   embedding library for its actively-maintained successor — each verified by re-running the full
+   pipeline end-to-end afterward, not just by re-reading the diff.
 
 ## Known limitations & future work
 

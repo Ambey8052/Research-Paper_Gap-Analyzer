@@ -1,4 +1,4 @@
-import { pipeline } from "@xenova/transformers";
+import { pipeline } from "@huggingface/transformers";
 import { logger } from "../utils/logger.js";
 
 const MODEL_NAME = "Xenova/all-MiniLM-L6-v2"; // 384-dim, runs fully local/CPU, no API key

@@ -9,6 +9,9 @@ export async function startResearch(req, res) {
   if (!topic || typeof topic !== "string" || topic.trim().length < 3) {
     return res.status(400).json({ error: "A research topic of at least 3 characters is required." });
   }
+  if (topic.trim().length > 200) {
+    return res.status(400).json({ error: "Research topic must be 200 characters or fewer." });
+  }
 
   const session = await ResearchSession.create({ topic: topic.trim() });
 
