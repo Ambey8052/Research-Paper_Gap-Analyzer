@@ -1,7 +1,4 @@
-# Render Blueprint — deploys the Express API (server/) as a Docker web service.
-# In the Render dashboard: New -> Blueprint -> select this repo -> it reads this file.
-# Vars marked sync: false are secrets/environment-specific and must be filled in
-# manually in the Render dashboard after the first deploy (never committed to the repo).
+
 services:
   - type: web
     name: researchmind-server
