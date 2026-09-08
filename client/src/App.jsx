@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage.jsx";
 import SessionPage from "./pages/SessionPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import HelpPage from "./pages/HelpPage.jsx";
+import ResultsGuidePage from "./pages/ResultsGuidePage.jsx";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/session/:id" element={<SessionPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/guide" element={<ResultsGuidePage />} />
         <Route path="/help" element={<HelpPage />} />
       </Routes>
     </div>

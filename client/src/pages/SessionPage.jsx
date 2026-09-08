@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { HelpCircle } from "lucide-react";
 import { useResearchSession } from "../hooks/useResearchSession.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import PipelineProgress from "../components/PipelineProgress.jsx";
 import PaperList from "../components/PaperList.jsx";
 import LiteratureReview from "../components/LiteratureReview.jsx";
@@ -12,6 +14,8 @@ export default function SessionPage() {
   const { id } = useParams();
   const { session, papers, error } = useResearchSession(id);
   const [activeTab, setActiveTab] = useState("Gaps");
+
+  useDocumentTitle(session ? `${session.topic} — ResearchMind` : "ResearchMind");
 
   if (error) {
     return <div className="mx-auto max-w-4xl px-6 py-16 text-red-600">{error}</div>;
@@ -48,20 +52,29 @@ export default function SessionPage() {
 
       {isDone && (
         <>
-          <div className="mb-6 flex gap-2 border-b border-slate-200">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium ${
-                  activeTab === tab
-                    ? "border-b-2 border-brand-600 text-brand-700"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="mb-6 flex items-center justify-between border-b border-slate-200">
+            <div className="flex gap-2">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    activeTab === tab
+                      ? "border-b-2 border-brand-600 text-brand-700"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <Link
+              to="/guide"
+              className="mb-2 flex items-center gap-1 text-xs text-slate-400 hover:text-brand-600"
+            >
+              <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              What am I looking at?
+            </Link>
           </div>
 
           {activeTab === "Gaps" && (

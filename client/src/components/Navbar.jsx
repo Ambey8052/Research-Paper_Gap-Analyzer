@@ -5,6 +5,7 @@ import { BrainCircuit, Menu, X } from "lucide-react";
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
   { to: "/about", label: "About Project" },
+  { to: "/guide", label: "Results Guide" },
   { to: "/help", label: "Help" },
 ];
 

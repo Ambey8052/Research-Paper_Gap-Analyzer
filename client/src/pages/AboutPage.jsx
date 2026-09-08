@@ -1,4 +1,5 @@
 import { Search, Layers, FileText, Target, Github } from "lucide-react";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 const AGENTS = [
   {
@@ -35,6 +36,8 @@ const RGCS_WEIGHTS = [
 ];
 
 export default function AboutPage() {
+  useDocumentTitle("About the Project — ResearchMind");
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
       <p className="text-sm font-medium text-brand-600">About this project</p>

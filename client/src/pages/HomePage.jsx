@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { createResearchSession } from "../api/researchApi.js";
 import TopicForm from "../components/TopicForm.jsx";
 import RecentSessionsList from "../components/RecentSessionsList.jsx";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  useDocumentTitle("ResearchMind — Multi-Agent AI for Literature Review & Research Gap Discovery");
 
   async function handleSubmit(topic) {
     setSubmitting(true);

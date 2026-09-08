@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /session/
+
+Sitemap: https://research-gap-finder-eight.vercel.app/sitemap.xml

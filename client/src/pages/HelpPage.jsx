@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 const STEPS = [
   { title: "Enter a topic", description: "Type a research topic (e.g. \"agentic AI in healthcare\") on the home page and click Analyze." },
@@ -31,6 +32,8 @@ const FAQS = [
 ];
 
 export default function HelpPage() {
+  useDocumentTitle("Help — ResearchMind");
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
       <p className="text-sm font-medium text-brand-600">Help</p>
