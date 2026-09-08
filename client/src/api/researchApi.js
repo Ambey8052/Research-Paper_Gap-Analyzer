@@ -26,3 +26,7 @@ export async function fetchRecentSessions() {
   const { data } = await api.get("/research");
   return data;
 }
+
+export async function deleteSession(sessionId) {
+  await api.delete(`/research/${sessionId}`);
+}

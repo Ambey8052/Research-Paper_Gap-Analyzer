@@ -45,3 +45,14 @@ export async function listSessions(req, res) {
     .lean();
   res.json(sessions);
 }
+
+export async function deleteSession(req, res) {
+  const session = await ResearchSession.findByIdAndDelete(req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+
+  // Papers are only ever queried by sessionId (never independently listed), so cleaning
+  // them up here prevents orphaned documents from piling up in Atlas as sessions get deleted.
+  await Paper.deleteMany({ sessionId: req.params.id });
+
+  res.status(204).send();
+}
