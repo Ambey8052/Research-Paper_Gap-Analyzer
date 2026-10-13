@@ -1,5 +1,6 @@
 import { ResearchSession } from "../models/ResearchSession.js";
 import { Paper } from "../models/Paper.js";
+import { PaperDraft } from "../models/PaperDraft.js";
 import { runPipeline } from "../agents/orchestrator.js";
 import { logger } from "../utils/logger.js";
 
@@ -51,8 +52,11 @@ export async function deleteSession(req, res) {
   if (!session) return res.status(404).json({ error: "Session not found" });
 
   // Papers are only ever queried by sessionId (never independently listed), so cleaning
-  // them up here prevents orphaned documents from piling up in Atlas as sessions get deleted.
-  await Paper.deleteMany({ sessionId: req.params.id });
+  // them (and generated drafts) up here prevents orphaned documents from piling up in Atlas as sessions get deleted.
+  await Promise.all([
+    Paper.deleteMany({ sessionId: req.params.id }),
+    PaperDraft.deleteMany({ sessionId: req.params.id }),
+  ]);
 
   res.status(204).send();
 }

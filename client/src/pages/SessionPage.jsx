@@ -7,6 +7,8 @@ import PipelineProgress from "../components/PipelineProgress.jsx";
 import PaperList from "../components/PaperList.jsx";
 import LiteratureReview from "../components/LiteratureReview.jsx";
 import GapCard from "../components/GapCard.jsx";
+import PaperGeneratorPanel from "../components/PaperGeneratorPanel.jsx";
+import { refNumbersByPaperId } from "../utils/citations.js";
 
 const TABS = ["Gaps", "Literature Review", "Papers"];
 
@@ -14,6 +16,13 @@ export default function SessionPage() {
   const { id } = useParams();
   const { session, papers, error } = useResearchSession(id);
   const [activeTab, setActiveTab] = useState("Gaps");
+  const [selectedGaps, setSelectedGaps] = useState([]); // indexes into session.gaps
+
+  function toggleGap(index) {
+    setSelectedGaps((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index].sort((a, b) => a - b)
+    );
+  }
 
   useDocumentTitle(session ? `${session.topic} — ResearchMind` : "ResearchMind");
 
@@ -27,6 +36,15 @@ export default function SessionPage() {
 
   const isDone = session.status === "completed";
   const isFailed = session.status === "failed";
+
+  const paperById = new Map(papers.map((p) => [String(p._id), p]));
+  const refByPaperId = refNumbersByPaperId(session.literatureReview?.references);
+  const supportingPapersFor = (gap) =>
+    (gap.supportingPaperIds || [])
+      .map((id) => paperById.get(String(id)))
+      .filter(Boolean)
+      .map((p) => ({ ...p, ref: refByPaperId.get(String(p._id)) }))
+      .sort((a, b) => (a.ref ?? Infinity) - (b.ref ?? Infinity));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -80,14 +98,30 @@ export default function SessionPage() {
           {activeTab === "Gaps" && (
             <div className="space-y-4">
               {session.gaps?.length > 0 ? (
-                session.gaps.map((gap) => <GapCard key={gap.title} gap={gap} />)
+                <>
+                  <PaperGeneratorPanel
+                    sessionId={id}
+                    gaps={session.gaps}
+                    selectedIndexes={selectedGaps}
+                    onClearSelection={() => setSelectedGaps([])}
+                  />
+                  {session.gaps.map((gap, i) => (
+                    <GapCard
+                      key={gap.title}
+                      gap={gap}
+                      supportingPapers={supportingPapersFor(gap)}
+                      selected={selectedGaps.includes(i)}
+                      onToggle={() => toggleGap(i)}
+                    />
+                  ))}
+                </>
               ) : (
                 <p className="text-sm text-slate-500">No candidate gaps were identified.</p>
               )}
             </div>
           )}
 
-          {activeTab === "Literature Review" && <LiteratureReview review={session.literatureReview} />}
+          {activeTab === "Literature Review" && <LiteratureReview review={session.literatureReview} papers={papers} />}
 
           {activeTab === "Papers" && <PaperList papers={papers} />}
         </>

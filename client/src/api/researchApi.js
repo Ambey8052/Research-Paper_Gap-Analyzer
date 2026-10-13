@@ -30,3 +30,22 @@ export async function fetchRecentSessions() {
 export async function deleteSession(sessionId) {
   await api.delete(`/research/${sessionId}`);
 }
+
+export async function createPaperDraft(sessionId, { gapIndexes, authors, affiliation }) {
+  const { data } = await api.post(`/research/${sessionId}/drafts`, { gapIndexes, authors, affiliation });
+  return data; // { draftId }
+}
+
+export async function fetchPaperDrafts(sessionId) {
+  const { data } = await api.get(`/research/${sessionId}/drafts`);
+  return data;
+}
+
+export async function fetchPaperDraft(sessionId, draftId) {
+  const { data } = await api.get(`/research/${sessionId}/drafts/${draftId}`);
+  return data;
+}
+
+export async function deletePaperDraft(sessionId, draftId) {
+  await api.delete(`/research/${sessionId}/drafts/${draftId}`);
+}

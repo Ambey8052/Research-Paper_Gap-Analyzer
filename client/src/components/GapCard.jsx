@@ -21,13 +21,32 @@ function BreakdownBar({ label, value }) {
   );
 }
 
-export default function GapCard({ gap }) {
+/**
+ * `supportingPapers` = [{ _id, title, url, ref }] for the gap's closest existing work.
+ * `onToggle` makes the card selectable (for generating a research paper from it).
+ */
+export default function GapCard({ gap, supportingPapers = [], selected = false, onToggle }) {
   const breakdown = gap.scoreBreakdown || {};
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div
+      className={`rounded-xl border bg-white p-5 transition ${
+        selected ? "border-brand-400 ring-2 ring-brand-100" : "border-slate-200"
+      }`}
+    >
       <div className="mb-2 flex items-start justify-between gap-4">
-        <h4 className="font-semibold text-slate-900">{gap.title}</h4>
+        <div className="flex items-start gap-3">
+          {onToggle && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggle}
+              aria-label={`Select gap for paper: ${gap.title}`}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+          )}
+          <h4 className="font-semibold text-slate-900">{gap.title}</h4>
+        </div>
         <span
           className={`shrink-0 rounded-full border px-3 py-1 text-sm font-semibold ${scoreColor(gap.rgcs)}`}
           title="Research Gap Confidence Score"
@@ -52,6 +71,22 @@ export default function GapCard({ gap }) {
               {cluster}
             </span>
           ))}
+        </div>
+      )}
+
+      {supportingPapers.length > 0 && (
+        <div className="mt-3 text-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Closest existing work</p>
+          <ul className="mt-1 space-y-1">
+            {supportingPapers.map((paper) => (
+              <li key={paper._id} className="flex gap-2 text-slate-600">
+                {paper.ref && <span className="shrink-0 font-mono text-xs leading-5 text-brand-600">[{paper.ref}]</span>}
+                <a href={paper.url} target="_blank" rel="noreferrer" className="hover:text-brand-600">
+                  {paper.title}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

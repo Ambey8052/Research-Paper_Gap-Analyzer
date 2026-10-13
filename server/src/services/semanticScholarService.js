@@ -3,7 +3,7 @@ import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
 const S2_API_URL = "https://api.semanticscholar.org/graph/v1/paper/search";
-const FIELDS = "title,abstract,year,authors,externalIds,citationCount,url";
+const FIELDS = "title,abstract,year,authors,externalIds,citationCount,url,venue,journal";
 
 /**
  * Searches Semantic Scholar's free Graph API. Works without a key at low
@@ -30,6 +30,9 @@ export async function searchSemanticScholar(topic, maxResults = 20) {
       year: paper.year || undefined,
       doi: paper.externalIds?.DOI || undefined,
       url: paper.url,
+      venue: paper.journal?.name || paper.venue || undefined,
+      volume: paper.journal?.volume?.trim() || undefined,
+      pages: paper.journal?.pages?.trim() || undefined,
       citationCount: paper.citationCount || 0,
     }));
   } catch (err) {

@@ -16,6 +16,10 @@ const paperSchema = new mongoose.Schema(
     year: { type: Number },
     doi: { type: String },
     url: { type: String },
+    // Publication details for IEEE-style references (Semantic Scholar only; arXiv lacks them)
+    venue: { type: String },
+    volume: { type: String },
+    pages: { type: String },
     citationCount: { type: Number, default: 0 },
 
     // Populated by Agent 2 (Classifier)

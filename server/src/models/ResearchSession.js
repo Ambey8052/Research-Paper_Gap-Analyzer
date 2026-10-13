@@ -35,8 +35,19 @@ const gapSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// IEEE reference entry; `ref` is the number used in in-text citations like "[3]".
+export const referenceSchema = new mongoose.Schema(
+  {
+    ref: { type: Number, required: true },
+    paperId: { type: mongoose.Schema.Types.ObjectId, ref: "Paper" },
+    text: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const comparisonRowSchema = new mongoose.Schema(
   {
+    ref: Number,
     paperId: { type: mongoose.Schema.Types.ObjectId, ref: "Paper" },
     title: String,
     year: Number,
@@ -59,6 +70,7 @@ const literatureReviewSchema = new mongoose.Schema(
     ],
     trends: { type: String, default: "" },
     comparisonTable: [comparisonRowSchema],
+    references: [referenceSchema],
     generatedAt: { type: Date },
   },
   { _id: false }

@@ -320,6 +320,11 @@ client falls back to same-origin `/api`, which nginx proxies to the `server` con
 | `GET` | `/api/research` | Lists the 20 most recent sessions (topic, status, paper count). |
 | `GET` | `/api/research/:id` | Full session: pipeline `steps[]`, `clusters[]`, `literatureReview`, `gaps[]`. Poll this every ~2s while `status` is `pending`/`running`. |
 | `GET` | `/api/research/:id/papers` | The papers found for a session, with cluster/topic tags. |
+| `DELETE` | `/api/research/:id` | Deletes a session with its papers and paper drafts. |
+| `POST` | `/api/research/:id/drafts` | Body `{ gapIndexes, authors?, affiliation? }` (1-4 gap indexes). Starts writing an IEEE-format research paper draft in the background. Returns `{ draftId }`. Rate-limited to 10/hour per IP. |
+| `GET` | `/api/research/:id/drafts` | Lists a session's paper drafts. |
+| `GET` | `/api/research/:id/drafts/:draftId` | Full draft: `title`, `abstract`, `indexTerms`, `sections[]`, `references[]`, `originality`. Poll every ~3s while `status` is `pending`/`running`. |
+| `DELETE` | `/api/research/:id/drafts/:draftId` | Deletes one draft. |
 | `GET` | `/api/health` | Liveness check. |
 
 ## Security
