@@ -2,7 +2,7 @@
 
 > Fast-load context for AI assistants. Read this first; open source files only for the area you're changing.
 > Human-facing docs live in `README.md` (long). This file is the compressed version + things README doesn't say.
-> Whole codebase is ~4k lines of JS. Last synced with code: 2026-10-13 (citations + paper writer added after commit 7e2eeb4).
+> Whole codebase is ~5.5k lines of JS. Last synced with code: 2026-11-23 (plagiarism & AI checker added after commit 6948d91).
 
 ## 1. One-paragraph summary
 
@@ -23,6 +23,7 @@ ResearchMind
 │   ├── A3 Lit Review    → Gemini: intro, per-cluster related work, trends, comparison table, IEEE refs
 │   ├── A4 Gap Detector  → Gemini proposes 3-6 gaps → code computes RGCS → sort desc
 │   └── On demand: Paper Writer → user selects 1-4 gaps → IEEE proposal paper draft (see §5b)
+├── Separate tool: Plagiarism & AI checker (/checker) — any text or a draft → report (see §5c)
 ├── Novelty: RGCS = 0.40·sparsity + 0.25·recency + 0.20·citationTrend + 0.15·llmNovelty
 │   (65%+ of score is computed from data, LLM's own opinion is only 15%)
 ├── Stack: MongoDB · Express · React(Vite, Tailwind v3) · Node 20 ESM · Google Gemini · HF transformers.js
@@ -73,21 +74,31 @@ server/src/
   models/PaperDraft.js        sessionId, gapIndexes, status/progressMessage, title, abstract, indexTerms, sections[], references[], originality
   utils/citations.js          [n] renumbering by first appearance, hallucinated-number removal, IEEE reference formatter
   utils/originality.js        8-word shingle overlap vs source abstracts
+  utils/modelLock.js          serializes local ONNX model use (512 MB Render limit) — see §5c
+  checker/                    plagiarism & AI checker: textProcessing, plagiarismCheck, aiDetection, runCheck,
+                              calibration.json (committed; produced by scripts/calibrateChecker.js)
+  controllers/checkController.js + routes/checkRoutes.js   /api/checks POST · GET /:id · DELETE /:id (no list!)
+  models/CheckReport.js       sentences[] (match, aiProbability), sources[], plagiarism{}, ai{}; TTL 7 days
+  services/openAlexService.js OpenAlex search (optional OPENALEX_API_KEY), rebuilds inverted-index abstracts
   services/llmService.js      Gemini client: askLLM / askLLMJSON, retry 429/500/503 (1s, 3s), thinking off
   services/arxivService.js    Atom XML API (keyless), returns [] on error
   services/semanticScholarService.js  Graph API, optional key, returns [] on error
-  services/embeddingService.js  @huggingface/transformers, Xenova/all-MiniLM-L6-v2, 384-dim, local CPU
+  services/embeddingService.js  @huggingface/transformers, Xenova/all-MiniLM-L6-v2, 384-dim, batched; load→use→dispose
   services/vectorSearchService.js  Atlas $vectorSearch with in-memory cosine fallback  ⚠ currently unused
   scripts/createVectorIndex.js     `npm run create-vector-index` (one-off)
+  scripts/calibrateChecker.js      `npm run calibrate-checker` — builds dataset, fits detector, writes calibration.json
+  scripts/prefetchModels.js        `npm run prefetch-models` — run in Dockerfile to bake MiniLM into the image
 
 client/src/
-  App.jsx              routes: / · /session/:id · /session/:id/draft/:draftId · /about · /guide · /help
+  App.jsx              routes: / · /session/:id · /session/:id/draft/:draftId · /checker · /checker/:id · /about · /guide · /help
   api/researchApi.js   axios; baseURL = VITE_API_BASE_URL || "/api"
   hooks/useResearchSession.js  polling logic;  hooks/useDocumentTitle.js
   pages/               HomePage (TopicForm + RecentSessionsList), SessionPage (progress + tabs Gaps|Lit Review|Papers),
                        DraftPage (polls draft, IEEE layout, originality report, export LaTeX/Markdown/print-PDF),
+                       CheckerPage (paste/upload, recent checks in localStorage), CheckReportPage (highlights, sources, AI breakdown),
                        AboutPage, HelpPage, ResultsGuidePage (explains RGCS to end users)
   utils/citations.js   [n] → anchor links;  utils/exportDraft.js  IEEEtran LaTeX (\cite merging, thebibliography) + Markdown
+  utils/extractText.js PDF (pdfjs-dist) / DOCX (mammoth) text extraction IN THE BROWSER, lazy-loaded; draftToPlainText
   components/          GapCard (RGCS badge: ≥70 green, ≥40 amber + 4 breakdown bars, select checkbox, closest work [n]),
                        PaperGeneratorPanel (top of Gaps tab), LiteratureReview (react-markdown+gfm, papers per theme, References),
                        PaperList, PipelineProgress, RecentSessionsList (with delete), ConfirmDialog, Navbar, TopicForm
@@ -122,6 +133,30 @@ If you change weights, also update: the JSDoc above `runGapDetector`, README §R
   then re-check; remaining overlaps stored in `originality.flaggedPassages`. Only covers session sources — UI says it's
   not a Turnitin substitute. Don't claim "plagiarism-free".
 - Sessions created before this feature lack `literatureReview.references`; UI degrades (no numbers, hint to re-run).
+
+## 5c. Plagiarism & AI checker
+
+- **Plagiarism**: keyword queries from the text (topic + ~7 sentences; never full text) → OpenAlex (fallback arXiv/S2 if
+  < 10 results) → candidate titles+abstracts split into sentences → per sentence: **exact** = trigram containment
+  ≥ 0.5 vs one source sentence; else **paraphrase** = MiniLM cosine ≥ calibrated threshold. Quoted sentences excluded;
+  cited matches reported separately (`citedMatchPercent`), not in `similarityPercent`. Abstracts only — not full text/web.
+- **AI detection**: 12 stylometric document features (`FEATURES` in aiDetection.js; citation markers stripped first)
+  → logistic regression; strict "Likely AI" cut-off from calibration. Whole-document only — no per-sentence AI scores.
+  **No LLM in the checker** — deterministic and explainable like RGCS.
+- **Tried and rejected (don't re-add without new evidence)**: distilgpt2 perplexity/top-10/perplexity-burstiness →
+  AUC 0.91 vs 1.00 for style features, ~310 MB RAM (its q8 file is 237 MB — vocab table stays fp32), and modern Gemini
+  text is *less* predictable to GPT-2 than human abstracts. Sentence-level detection: 57% accurate → not shown.
+- **Calibration** (`npm run calibrate-checker`; ~15 min first run, ~1 min from cache): human = arXiv abstracts 2015-2020
+  in 12 fields, AI = Gemini abstracts for the same titles; title-grouped 70/30 split; cut-off chosen on train only.
+  Out-of-distribution set: 4 unseen fields + 3 unseen prompt styles. Metrics stored in calibration.json, shown in reports.
+  Current: held-out 96.6% acc / 6.9% human FPR; OOD human FPR 4.2%; **"non-native style" AI recall 0%** (known blind spot).
+  Paraphrase threshold = 98th pct of max similarity vs ~700 unrelated sentences (pool size must match live checks)
+  → 0.76, recall 38%, 1.8% false matches. Re-run when changing features or the embedding model.
+  Raw texts cached in server/.calibration-cache (gitignored).
+- **Memory** (measured in-process, the Linux-comparable number; Windows working set overstates): a 4k-word check peaked at
+  576 MB RSS until embeddings were sorted by length before batching, batch 8, 1000-char cap, onnxruntime arena off,
+  2 threads → 244 MB. MiniLM is loaded→used→disposed under `withModelLock`. Never keep a model resident globally.
+- Privacy: reports TTL 7 days, no list endpoint, files parsed client-side. Keep it that way.
 
 ## 6. Run / build / deploy
 
@@ -165,9 +200,13 @@ docker compose up --build                    # client :8080, server :5000, mongo
   they're groundwork for RAG / future agents. Atlas vector index is optional (in-memory fallback exists).
 - Pipeline runs in-process (fire-and-forget promise). A server restart mid-run leaves the session stuck at `running`.
 - Session list is global (no auth) — anyone can see/delete any session (and its drafts).
+- OpenAlex keyless = ~100 searches/day shared per IP ($0.001/search); set OPENALEX_API_KEY on Render (free, ~1000/day).
 - Semantic Scholar keyless tier often 429s → corpus is arXiv-only → no venues and all citationCount 0 (weakens
   citationTrend in RGCS and IEEE refs fall back to arXiv ids). Setting SEMANTIC_SCHOLAR_API_KEY fixes it.
 - `render.md` is gitignored (local deploy notes).
+- **Windows + Python edit scripts**: always `open(p, encoding="utf-8")` — the default cp1252 once wrote "—" as byte 0x97
+  into ResultsGuidePage.jsx (showed as "�" live). Prefer the Edit tool.
+- `npm audit fix --omit=dev` prunes devDependencies (vite vanishes) — run `npm install` afterwards.
 
 ## 9. Roadmap / not built (deliberate MVP scope)
 

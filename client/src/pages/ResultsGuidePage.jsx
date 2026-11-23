@@ -1,4 +1,4 @@
-import { Search, Loader2, BookOpen, Target, FileText } from "lucide-react";
+import { Search, Loader2, BookOpen, Target, FileText, ShieldCheck } from "lucide-react";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 const PIPELINE_STEPS = [
@@ -19,7 +19,7 @@ const PAPERS_COLUMNS = [
 const REVIEW_SECTIONS = [
   { name: "Introduction", meaning: "A short overview of the topic and what this review covers." },
   { name: "Related Work", meaning: "One write-up per theme, summarizing what those papers do in common. The papers in each theme are listed underneath it." },
-  { name: "Citations", meaning: "Numbers like [3] point to an entry in the References list � click one to jump to it. Numbers follow order of first appearance (IEEE style)." },
+  { name: "Citations", meaning: "Numbers like [3] point to an entry in the References list — click one to jump to it. Numbers follow order of first appearance (IEEE style)." },
   { name: "Research Trends", meaning: "Observations about how the different themes relate to or build on each other." },
   { name: "Comparison Table", meaning: "Every paper side by side with a one-line summary of its core contribution." },
   { name: "References", meaning: "Every paper formatted as an IEEE reference (authors, title, venue or arXiv id, year, DOI)." },
@@ -29,7 +29,7 @@ const DRAFT_PARTS = [
   { name: "Selecting gaps", meaning: "Tick 1-4 gap cards. With several, the highest-scoring one becomes the main focus and the others are woven in as supporting aspects." },
   { name: "Structure", meaning: "IEEE conference format: Abstract, Index Terms, Introduction, Related Work, Research Gap, Proposed Approach, Evaluation Protocol, Discussion and Limitations, Conclusion, References." },
   { name: "No invented results", meaning: "No experiments have been run, so the paper proposes an approach and how to evaluate it. It never reports accuracy numbers or findings." },
-  { name: "Originality check", meaning: "Each section is compared word-for-word against the source abstracts. Copied phrasing gets rewritten automatically. This is not a full plagiarism check � still run Turnitin or similar." },
+  { name: "Originality check", meaning: "Each section is compared word-for-word against the source abstracts. Copied phrasing gets rewritten automatically. This is not a full plagiarism check — still run Turnitin or similar." },
   { name: "Export", meaning: "Download LaTeX (IEEEtran template, ready for Overleaf), Markdown, or use Print to save a two-column PDF." },
 ];
 
@@ -38,6 +38,14 @@ const RGCS_PARTS = [
   { name: "Recency", meaning: "How recently the closest related papers were published. Recent activity means the area is still being actively worked on." },
   { name: "Citation trend", meaning: "Whether the closest related papers are picking up citations quickly — a sign this is a \"hot\" area worth building on." },
   { name: "LLM novelty", meaning: "The AI's own guess at how original the idea is. It's counted the least (15%), so the score isn't just the AI's opinion." },
+];
+
+const CHECKER_PARTS = [
+  { name: "Similarity %", meaning: "Share of your words in sentences that match a published paper and are not cited. Quoted sentences are excluded; matched-but-cited sentences are shown separately." },
+  { name: "Exact vs paraphrase", meaning: "Exact = at least half of a sentence's three-word sequences appear in one source sentence. Paraphrase = different words, same meaning, measured with sentence embeddings at a threshold calibrated on real paraphrases." },
+  { name: "Matched sources", meaning: "Candidate papers are found by searching OpenAlex, arXiv and Semantic Scholar with keywords from your text, then compared sentence by sentence (titles and abstracts only)." },
+  { name: "AI likelihood", meaning: "Twelve writing-style signals — sentence-length burstiness, vocabulary richness, word length, function words, concrete numbers, acronyms, AI-typical phrases and more — combined by a model trained on human vs AI-written abstracts. \"Likely AI-generated\" uses a strict cut-off chosen to rarely flag human text; scores between 50% and that cut-off are reported as uncertain. Each report shows the measured accuracy, including on harder unseen text." },
+  { name: "Limits", meaning: "Statistical estimates, not proof. Jargon and non-native English can look AI-like; edited AI text can look human. Use with human judgement." },
 ];
 
 function GuideSection({ icon: Icon, title, intro, rows }) {
@@ -97,6 +105,13 @@ export default function ResultsGuidePage() {
         title="Writing a research paper"
         intro="The panel at the top of the Gaps tab turns selected gaps into a full paper draft:"
         rows={DRAFT_PARTS}
+      />
+
+      <GuideSection
+        icon={ShieldCheck}
+        title="The Plagiarism & AI checker"
+        intro="A separate tool (navbar → Plagiarism & AI Check) for any text, or for a generated paper draft:"
+        rows={CHECKER_PARTS}
       />
 
       <GuideSection

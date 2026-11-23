@@ -20,6 +20,8 @@ services:
         value: paper_vector_index
       - key: SEMANTIC_SCHOLAR_API_KEY
         sync: false
+      - key: OPENALEX_API_KEY
+        sync: false
       - key: MAX_PAPERS_PER_SEARCH
         value: "40"
       - key: CLIENT_ORIGIN

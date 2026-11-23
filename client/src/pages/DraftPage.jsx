@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Download, FileCode2, Loader2, Printer, ShieldCheck } from "lucide-react";
-import { fetchPaperDraft } from "../api/researchApi.js";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Download, FileCode2, Loader2, Printer, ScanSearch, ShieldCheck } from "lucide-react";
+import { fetchPaperDraft, createCheck } from "../api/researchApi.js";
+import { draftToPlainText } from "../utils/extractText.js";
+import { rememberCheck } from "./CheckerPage.jsx";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { splitCitations } from "../utils/citations.js";
 import {
@@ -158,6 +160,22 @@ const TOOLBAR_BUTTON =
 export default function DraftPage() {
   const { id, draftId } = useParams();
   const { draft, error } = useDraft(id, draftId);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState(null);
+  const navigate = useNavigate();
+
+  async function handleCheck() {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      const { checkId } = await createCheck({ text: draftToPlainText(draft).slice(0, 60000), title: draft.title });
+      rememberCheck(checkId, draft.title);
+      navigate(`/checker/${checkId}`);
+    } catch (err) {
+      setCheckError(err.response?.data?.error || err.message);
+      setChecking(false);
+    }
+  }
 
   useDocumentTitle(draft?.title || "Research paper draft — ResearchMind");
 
@@ -170,6 +188,10 @@ export default function DraftPage() {
 
         {draft?.status === "completed" && (
           <div className="flex flex-wrap gap-2">
+            <button type="button" className={TOOLBAR_BUTTON} onClick={handleCheck} disabled={checking}>
+              {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" aria-hidden="true" />}
+              Check plagiarism &amp; AI
+            </button>
             <button
               type="button"
               className={TOOLBAR_BUTTON}
@@ -192,6 +214,7 @@ export default function DraftPage() {
       </div>
 
       {error && <p className="text-red-600">{error}</p>}
+      {checkError && <p className="mb-4 text-sm text-red-600 print:hidden">{checkError}</p>}
       {!draft && !error && <p className="text-slate-500">Loading draft...</p>}
 
       {draft && ACTIVE_STATUSES.has(draft.status) && (

@@ -16,6 +16,7 @@ LLM opinion.
 - [Architecture](#architecture)
 - [The agent pipeline](#the-agent-pipeline)
 - [Research Gap Confidence Score (RGCS)](#research-gap-confidence-score-rgcs)
+- [Plagiarism & AI content checker](#plagiarism--ai-content-checker)
 - [Tech stack](#tech-stack)
 - [Project structure](#project-structure)
 - [Getting started](#getting-started)
@@ -140,6 +141,45 @@ RGCS = 0.40 × sparsity + 0.25 × recency + 0.20 × citationTrend + 0.15 × llmN
 The full breakdown (not just the final number) is returned to the frontend and shown on every gap
 card, so the score is auditable rather than a black box. Implementation: `computeQuantitativeScores()`
 in `server/src/agents/gapDetectorAgent.js`.
+
+## Plagiarism & AI content checker
+
+A separate tool (`/checker`, or **Check plagiarism & AI** on a generated paper draft) that takes
+pasted text or a PDF/DOCX/TXT file and returns a report. Files are parsed in the browser and never
+uploaded; reports expire after 7 days and are reachable only by their link.
+
+**Plagiarism.** Keyword queries built from the text (never the full text) search OpenAlex
+(falling back to arXiv and Semantic Scholar). Every sentence is then compared with every sentence
+of the candidate papers' titles and abstracts two ways: **exact** (at least half of its word
+trigrams appear in one source sentence) and **paraphrase** (MiniLM sentence-embedding cosine
+similarity above a calibrated threshold). Quoted sentences are excluded and matches in cited
+sentences are reported separately, so the similarity % counts only unattributed overlap.
+
+**AI-content detection.** Twelve stylometric features (sentence-length burstiness, vocabulary
+richness, word length, long words, function words, concrete numbers, acronyms, commas,
+parentheses, first-person plural, LLM-overused phrases, sentence length) combined by a logistic
+regression. No LLM opinion is involved, so scores are deterministic and each feature's push is shown.
+
+**Calibration and measured accuracy** (`npm run calibrate-checker`, results in
+`server/src/checker/calibration.json`). Human text: 96 arXiv abstracts from 2015-2020 across 12
+fields. AI text: 96 abstracts Gemini wrote for the same titles. Title-grouped 70/30 split.
+
+| Test | Result |
+|---|---|
+| AI detection, held-out abstracts (58) | 96.6% accuracy, AUC 1.00, 6.9% of human texts flagged, 100% of AI texts caught |
+| Human abstracts from 4 unseen fields (24) | 4.2% wrongly flagged |
+| AI text from unseen prompts | informal summaries 88% caught, AI-rewritten human abstracts 86%, **"non-native English" style 0%** |
+| Paraphrase detection (218 sentence pairs) | 38% of heavy paraphrases caught at 1.8% false matches; word overlap alone catches 0.9% |
+
+What was tried and dropped: perplexity, top-10-token rate, and perplexity burstiness from a local
+distilgpt2 reached AUC 0.91 against 1.00 for style features alone, and the model needs ~310 MB of
+RAM, more than Render's free tier allows. (Modern Gemini text was actually *less* predictable to
+GPT-2 than human abstracts, the reverse of the textbook rule.) Sentence-level AI scores measured
+57% accurate, so no individual sentence is flagged as AI.
+
+Limits: only titles and abstracts are compared (not full texts, paywalled work or the web), the
+detector has only seen Gemini output, and it misses AI text imitating simple non-native writing.
+Results are estimates for human review, not proof of misconduct.
 
 ## Tech stack
 
@@ -325,6 +365,9 @@ client falls back to same-origin `/api`, which nginx proxies to the `server` con
 | `GET` | `/api/research/:id/drafts` | Lists a session's paper drafts. |
 | `GET` | `/api/research/:id/drafts/:draftId` | Full draft: `title`, `abstract`, `indexTerms`, `sections[]`, `references[]`, `originality`. Poll every ~3s while `status` is `pending`/`running`. |
 | `DELETE` | `/api/research/:id/drafts/:draftId` | Deletes one draft. |
+| `POST` | `/api/checks` | Body `{ text, title?, checks?: { plagiarism, ai } }` (50 words – 60,000 chars). Starts a plagiarism & AI-content check. Returns `{ checkId }`. Rate-limited to 10/hour per IP. |
+| `GET` | `/api/checks/:id` | Check report: `sentences[]` (with `match` and `aiProbability`), `sources[]`, `plagiarism`, `ai`. Poll while `status` is `pending`/`running`. Reports expire after 7 days; there is deliberately no list route. |
+| `DELETE` | `/api/checks/:id` | Deletes a report. |
 | `GET` | `/api/health` | Liveness check. |
 
 ## Security

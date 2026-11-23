@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { env } from "./config/env.js";
 import researchRoutes from "./routes/researchRoutes.js";
+import checkRoutes from "./routes/checkRoutes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimiters.js";
 
@@ -23,6 +24,7 @@ export function createApp() {
   app.get("/api/health", (req, res) => res.json({ status: "ok" }));
   app.use("/api/research", apiLimiter);
   app.use("/api/research", researchRoutes);
+  app.use("/api/checks", apiLimiter, checkRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,0 +1,168 @@
+{
+  "calibratedAt": "2026-11-23T13:33:51.209Z",
+  "embeddingModel": "Xenova/all-MiniLM-L6-v2",
+  "dataset": {
+    "human": "96 arXiv abstracts submitted 2015-2020 across 12 fields",
+    "ai": "96 abstracts written by gemini-flash-lite-latest for the same titles",
+    "outOfDistribution": "24 human abstracts from cs.CR, stat.ME, q-fin.ST, cs.SE + 23 AI texts from 3 unseen prompt styles",
+    "paraphrases": "30 human abstracts paraphrased by gemini-flash-lite-latest"
+  },
+  "aiDocument": {
+    "features": [
+      "sentenceLengthCV",
+      "meanSentenceLength",
+      "typeTokenRatio",
+      "meanWordLength",
+      "longWordRate",
+      "commaRate",
+      "stopwordRate",
+      "digitRate",
+      "parenRate",
+      "acronymRate",
+      "weRate",
+      "markerRate"
+    ],
+    "weights": {
+      "sentenceLengthCV": -0.6297,
+      "meanSentenceLength": 0.6207,
+      "typeTokenRatio": 0.8217,
+      "meanWordLength": 1.1764,
+      "longWordRate": 1.4989,
+      "commaRate": 0.146,
+      "stopwordRate": -1.047,
+      "digitRate": -0.5753,
+      "parenRate": -0.0301,
+      "acronymRate": -0.1475,
+      "weRate": -0.3278,
+      "markerRate": 0.1812
+    },
+    "bias": -0.069,
+    "means": {
+      "sentenceLengthCV": 0.2693,
+      "meanSentenceLength": 25.7526,
+      "typeTokenRatio": 0.7322,
+      "meanWordLength": 6.088,
+      "longWordRate": 0.2455,
+      "commaRate": 0.0446,
+      "stopwordRate": 0.2812,
+      "digitRate": 0.0081,
+      "parenRate": 0.0083,
+      "acronymRate": 0.0164,
+      "weRate": 0.0152,
+      "markerRate": 0.0597
+    },
+    "stds": {
+      "sentenceLengthCV": 0.0894,
+      "meanSentenceLength": 4.6424,
+      "typeTokenRatio": 0.0767,
+      "meanWordLength": 0.6743,
+      "longWordRate": 0.0741,
+      "commaRate": 0.0191,
+      "stopwordRate": 0.0574,
+      "digitRate": 0.0149,
+      "parenRate": 0.0095,
+      "acronymRate": 0.0197,
+      "weRate": 0.0107,
+      "markerRate": 0.2029
+    },
+    "thresholds": {
+      "likelyAi": 0.5,
+      "uncertain": 0.5
+    },
+    "metrics": {
+      "samples": 58,
+      "accuracy": 0.9655,
+      "precision": 0.9355,
+      "recall": 1,
+      "falsePositiveRate": 0.069,
+      "auc": 1
+    },
+    "metricsAtLikelyAi": {
+      "samples": 58,
+      "accuracy": 0.9655,
+      "precision": 0.9355,
+      "recall": 1,
+      "falsePositiveRate": 0.069,
+      "auc": 1
+    },
+    "outOfDistribution": {
+      "overall": {
+        "samples": 47,
+        "accuracy": 0.766,
+        "precision": 0.9286,
+        "recall": 0.5652,
+        "falsePositiveRate": 0.0417,
+        "auc": 0.6812
+      },
+      "humanFalsePositiveRate": 0.0417,
+      "recallByPrompt": {
+        "nonNative": 0,
+        "rewriteHuman": 0.8571,
+        "informal": 0.875
+      }
+    },
+    "typical": {
+      "sentenceLengthCV": {
+        "human": 0.3174,
+        "ai": 0.2107
+      },
+      "meanSentenceLength": {
+        "human": 23.75,
+        "ai": 27.2857
+      },
+      "typeTokenRatio": {
+        "human": 0.6833,
+        "ai": 0.7917
+      },
+      "meanWordLength": {
+        "human": 5.469,
+        "ai": 6.7317
+      },
+      "longWordRate": {
+        "human": 0.1854,
+        "ai": 0.3096
+      },
+      "commaRate": {
+        "human": 0.0357,
+        "ai": 0.0482
+      },
+      "stopwordRate": {
+        "human": 0.3226,
+        "ai": 0.2396
+      },
+      "digitRate": {
+        "human": 0.0048,
+        "ai": 0
+      },
+      "parenRate": {
+        "human": 0.0077,
+        "ai": 0.0056
+      },
+      "acronymRate": {
+        "human": 0.0163,
+        "ai": 0.0103
+      },
+      "weRate": {
+        "human": 0.0145,
+        "ai": 0.012
+      },
+      "markerRate": {
+        "human": 0,
+        "ai": 0
+      }
+    },
+    "trainSamples": 134
+  },
+  "paraphrase": {
+    "threshold": 0.7602,
+    "exactContainment": 0.5,
+    "metrics": {
+      "sentencePairs": 218,
+      "recall": 0.3761,
+      "falseMatchRate": 0.0183,
+      "lexicalOnlyRecall": 0.0092,
+      "medianParaphraseSimilarity": 0.7275,
+      "medianUnrelatedSimilarity": 0.424
+    }
+  }
+}

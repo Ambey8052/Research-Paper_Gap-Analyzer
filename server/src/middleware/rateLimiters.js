@@ -28,3 +28,13 @@ export const createDraftLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many paper drafts generated from this IP. Please try again later." },
 });
+
+// A check runs ~8 scholarly-API searches plus two local models on the CPU, so it's capped like
+// the other expensive endpoints.
+export const createCheckLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many checks started from this IP. Please try again later." },
+});

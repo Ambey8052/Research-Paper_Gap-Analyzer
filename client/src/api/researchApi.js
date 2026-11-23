@@ -49,3 +49,17 @@ export async function fetchPaperDraft(sessionId, draftId) {
 export async function deletePaperDraft(sessionId, draftId) {
   await api.delete(`/research/${sessionId}/drafts/${draftId}`);
 }
+
+export async function createCheck({ text, title, checks }) {
+  const { data } = await api.post("/checks", { text, title, checks });
+  return data; // { checkId }
+}
+
+export async function fetchCheck(checkId) {
+  const { data } = await api.get(`/checks/${checkId}`);
+  return data;
+}
+
+export async function deleteCheck(checkId) {
+  await api.delete(`/checks/${checkId}`);
+}

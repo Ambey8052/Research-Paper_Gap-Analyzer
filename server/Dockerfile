@@ -1,4 +1,4 @@
-# Debian-based (not alpine) because @xenova/transformers pulls in onnxruntime-node,
+# Debian-based (not alpine) because @huggingface/transformers pulls in onnxruntime-node,
 # whose prebuilt native binaries do not support musl libc.
 FROM node:20-bookworm-slim
 
@@ -9,8 +9,11 @@ RUN npm install --omit=dev
 
 COPY . .
 
-# @xenova/transformers downloads its embedding model into node_modules/@xenova/transformers/.cache
-# on first use, so the app needs write access there at runtime — chown the whole tree to `node`.
+# Bake the embedding model into the image (otherwise each fresh container downloads it on first
+# use). It lives in node_modules/@huggingface/transformers/.cache, which also needs to stay
+# writable at runtime — hence the chown of the whole tree to `node`.
+RUN npm run prefetch-models
+
 RUN chown -R node:node /app
 
 ENV NODE_ENV=production
